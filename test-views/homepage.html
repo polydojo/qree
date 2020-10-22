@@ -1,0 +1,11 @@
+@= import qree;
+<doctype html>
+<html>
+<head><title>{{: data['title'] :}}</title></head>
+<body>
+{{= qree.renderPath("./test-views/header.html", data=None) =}}
+<h2>{{: data['title'] :}}</h2>
+<pre>{{: data['body'] :}}</pre>
+{{= qree.renderPath("./test-views/footer.html", data=None) =}}
+</body>
+<html>
