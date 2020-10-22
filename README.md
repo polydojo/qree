@@ -9,7 +9,7 @@ Qree is a single python module, under 100 lines of code. Instead of using regula
 It supports all Python language features. Targeted toward Python 3.6+ and Python 2.7+.
 
 ## Installation:
-You *shall soon* be able to `pip install qree`. But until then, kindly download `qree.py` into your project directory. Then, `import qree` as required.
+Please download `qree.py` into your project directory. Then, `import qree` as required.
 
 ## Text Interpolation:
 Use `{{: expression :}}` for HTML-escaped interpolation, or `{{= expression =}}` for interpolation *without* escaping. The latter is susceptible to XSS, so please be careful with it. Here are a few quick examples:
@@ -95,9 +95,9 @@ Python is an indented language. Use the special tags `@{` and `@}` for indicatin
 tplStr = """
 @= def isLeap (n):
 @{
-	@= if n % 400 == 0: return True;
-	@= if n % 100 == 0: return False;
-	@= return n % 4 == 0;
+    @= if n % 400 == 0: return True;
+    @= if n % 100 == 0: return False;
+    @= return n % 4 == 0;
 @}
 @= isOrIsNot = "IS" if isLeap(data['year']) else "is NOT"
 The year {{: data['year'] :}} {{: isOrIsNot :}} a leap year.
@@ -176,7 +176,7 @@ Let's say you have the following directory structure:
 - app.py
 - qree.py
 - views/
-		- homepage.html
+        - homepage.html
 ```
 Here's `homepage.html` :
 ```html
@@ -184,8 +184,8 @@ Here's `homepage.html` :
 <html>
 <head><title>{{: data['title'] :}}</title></head>
 <body>
-	<h2>{{: data['title'] :}}</h2>
-	<pre>{{: data['body'] :}}</pre>
+    <h2>{{: data['title'] :}}</h2>
+    <pre>{{: data['body'] :}}</pre>
 </body>
 <html>
 ```
@@ -193,19 +193,19 @@ Here's `homepage.html` :
 In `app.py`, you could have the following snippet:
 ```py
 def serve_homepage ():
-	return qree.renderPath("./views/homepage.html", data={
-		"title": "The TITLE Goes Here!",
-		"body": "And the body goes here ...",
-	});
+    return qree.renderPath("./views/homepage.html", data={
+        "title": "The TITLE Goes Here!",
+        "body": "And the body goes here ...",
+    });
 ```
 Which would be equivalent to:
 ```py
 def serve_homepage ():
-	with open("./views/homepage.html", "r") as f:
-		return qree.renderStr(f.read(), data={
-			"title": "The TITLE Goes Here!",
-			"body": "And the body goes here ...",
-		});
+    with open("./views/homepage.html", "r") as f:
+        return qree.renderStr(f.read(), data={
+            "title": "The TITLE Goes Here!",
+            "body": "And the body goes here ...",
+        });
 ```
 In either case, the output would be:
 ```html
@@ -225,25 +225,25 @@ Since templates can include any Python code, you can call `qree.renderPath()` fr
 - app.py
 - qree.py
 - views/
-		- header.html
-		- homepage.html
-		- footer.html
+        - header.html
+        - homepage.html
+        - footer.html
 ```
 With `header.html`:
 ```html
 <header class="header">
-	<a href="/link1">Link 1</a>
-	<a href="/link2">Link 2</a>
-	<a href="/link3">Link 3</a>
+    <a href="/link1">Link 1</a>
+    <a href="/link2">Link 2</a>
+    <a href="/link3">Link 3</a>
 </header>
 ```
 
 And similarly, footer.html:
 ```html
 <footer class="footer">
-	<a href="/linkA">Link A</a>
-	<a href="/linkB">Link B</a>
-	<a href="/linkC">Link C</a>
+    <a href="/linkA">Link A</a>
+    <a href="/linkB">Link B</a>
+    <a href="/linkC">Link C</a>
 </footer>
 ```
 
@@ -265,10 +265,10 @@ Now, you can use `header.html` and `footer.html` in `homepage.html`:
 And, as before, the snippet in `app.py`:
 ```py
 def serve_homepage ():
-	return qree.renderPath("./views/homepage.html", data={
-		"title": "The TITLE Goes Here!",
-		"body": "And the body goes here ...",
-	});
+    return qree.renderPath("./views/homepage.html", data={
+        "title": "The TITLE Goes Here!",
+        "body": "And the body goes here ...",
+    });
 ```
 Now, the output should be:
 ```html
@@ -277,16 +277,16 @@ Now, the output should be:
 <head><title>The TITLE Goes Here!</title></head>
 <body>
 <header class="header">
-	<a href="/link1">Link 1</a>
-	<a href="/link2">Link 2</a>
-	<a href="/link3">Link 3</a>
+    <a href="/link1">Link 1</a>
+    <a href="/link2">Link 2</a>
+    <a href="/link3">Link 3</a>
 </header>
 <h2>The TITLE Goes Here!</h2>
 <pre>And the body goes here ...</pre>
 <footer class="footer">
-	<a href="/linkA">Link A</a>
-	<a href="/linkB">Link B</a>
-	<a href="/linkC">Link C</a>
+    <a href="/linkA">Link A</a>
+    <a href="/linkB">Link B</a>
+    <a href="/linkC">Link C</a>
 </footer>
 </body>
 <html>
