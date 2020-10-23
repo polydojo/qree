@@ -2,9 +2,9 @@
 
 # Qree
 
-Qree (pronounced like 'curry') is a tiny but mighty Python templating engine, geared toward HTML. 'Qree' is short for: *Q*uote, *r*eplace, *e*xec(), *e*val().
+Qree (read 'Curie') is a tiny but mighty Python templating engine, geared toward HTML. 'Qree' is short for: *Q*uote, *r*eplace, *e*xec(), *e*val().
 
-Qree is a single python module, under 100 lines of code. Instead of using regular expressions or PEGs, Qree relies on Python's exec() and eval().
+Qree is a single python module, under 100 lines of code. Instead of using regular expressions or PEGs, Qree relies on Python's `exec()` and `eval()`.
 
 It supports all Python language features. Targeted toward Python 3.6+ and Python 2.7+.
 
@@ -238,7 +238,7 @@ With `header.html`:
 </header>
 ```
 
-And similarly, footer.html:
+And similarly, `footer.html`:
 ```html
 <footer class="footer">
     <a href="/linkA">Link A</a>

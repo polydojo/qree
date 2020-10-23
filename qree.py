@@ -1,19 +1,16 @@
-# Qree 0.0.1-dev
-# Copyright (c) 2020 Polydojo, Inc.
-# Qree may be freely distributed under the MIT license.
-
 """
-Qree (read 'curry') is a tiny but mighty templating engine.
-The name 'Qree' is short for: Quote, replace, exec(), eval().
-
-Instead of using regular expressions or complex grammars,
-Qree uses Python's exec() & eval() for all the heavy lifting.
-
-Inspired by the _.template() function in Underscore.js, Qree
-is under 100 lines of code, including docstrings & comments!
+Qree: Tiny but mighty Python templating.
+Copyright (c) 2020 Polydojo, Inc.
+Qree may be freely distributed under the MIT license.
+For more licensing details, visit:
+https://github.com/polydojo/qree/blob/master/LICENSE.txt
 """;
 
-import os;
+__version__ = "0.0.1";
+
+DEFAULT_TAG_MAP = { "@=": "@=",  "@{": "@{",  "@}": "@}",
+    "{{:": "{{:",  ":}}": ":}}",  "{{=": "{{=",  "=}}": "=}}",
+};
 
 def escapeHtml (s):
     "Simple HTML escaper.";
@@ -30,53 +27,62 @@ def dictDefaults (dicty, defaults):
             dicty[k] = defaults[k];
     return dicty;
 
-def quoteReplace (tplStr,   variable  ="data", tagMap=None):
-    "Returns as a string, the equivalent function body for `tplStr`.";
-    tagMap = dictDefaults(tagMap or {}, {
-        "@=": "@=",  "@{": "@{",  "@}": "@}",
-        "{{:": "{{:",  ":}}": ":}}",  "{{=": "{{=",  "=}}": "=}}",
-    });
+def roughValidateTagPair (tplStr, opTag, clTag):
+    "Helper for roughly validating that tag-counts match.";
+    if tplStr.count(opTag) != tplStr.count(clTag):
+        raise SyntaxError("Template Error:: Tag-count mismatch for tags `%s` and `%s`." % (opTag, clTag));
+    return True;
+
+def roughValidateTplStr (tplStr, tagMap):
+    "Helper for roughly validating `tplStr` formatting.";
     if "'''" in tplStr:
-        raise SyntaxError("Can't use 3 consecutive single quotes (''').");
-    fnStr = "def templateFn (%s):\n" %   variable  ;
+        raise SyntaxError("Template Error:: Can't use 3 consecutive single quotes (''').");
+    assert roughValidateTagPair(tplStr, tagMap["@{"], tagMap["@}"]);
+    assert roughValidateTagPair(tplStr, tagMap["{{:"], tagMap[":}}"]);
+    assert roughValidateTagPair(tplStr, tagMap["{{="], tagMap["=}}"]);
+    return True;
+
+def quoteReplace (tplStr, variable="data", tagMap=None):
+    "Returns as string, the function-equivalent of `tplStr`.";
+    tagMap = dictDefaults(tagMap or {}, DEFAULT_TAG_MAP);
+    assert roughValidateTplStr(tplStr, tagMap);
+    fnStr = "def templateFn (%s):\n" % variable;
     indentVal = 4;
     indentify = lambda: " " * indentVal;
     fnStr += indentify() + "from qree import escapeHtml as __qree__esc__html__;\n";
     fnStr += indentify() + "output = '';\n";
-    lines = tplStr.split("\n");
-    for lineIndex in range(len(lines)):
-        line = lines[lineIndex];
+    for line in tplStr.splitlines(keepends=True):
         lx = line.lstrip();
         if lx.startswith(tagMap["@="]):
             fnStr += indentify() + lx[2:].strip() + "\n";
         elif lx.startswith(tagMap["@{"]):
-            fnStr += "\n";
             indentVal += 4;
         elif lx.startswith(tagMap["@}"]):
             indentVal -= 4;
         else:
-            tailN = "\\n" if lineIndex != len(lines) - 1 else "";
             fnStr += indentify() + "output += " + "'''" +  (line
                 .replace(tagMap["{{:"],  "''' + __qree__esc__html__(")
                 .replace(tagMap[":}}"],  ") + '''")
                 .replace(tagMap["{{="],  "''' + str(")
                 .replace(tagMap["=}}"],  ") + '''")
-            ) + "%s''';\n" % tailN; 
+            ) + "''';\n";
     fnStr += indentify() + "return output;\n";
     return fnStr;
 
 def execEval (fnStr):
-    "Thin wrapper around Python's exec() and eval().";
+    "Converts `fnStr` to a callable function and returns it.";
     exec(fnStr); # Via exec(), 'templateFn' has been defined.
     return eval("templateFn");
 
-def renderStr (tplStr, data=None,   variable  ="data", tagMap=None):
-    "Render template string `tplStr` using `data`.";
-    fnStr = quoteReplace(tplStr,   variable  , tagMap);
+def renderStr (tplStr, data=None, variable="data", tagMap=None):
+    "Render template `tplStr` using `data`.";
+    fnStr = quoteReplace(tplStr, variable, tagMap);
     fn = execEval(fnStr);
     return fn(data);
 
-def renderPath(tplPath, data=None,   variable  ="data", tagMap=None):
+def renderPath (tplPath, data=None, variable="data", tagMap=None):
     "Render template at path `tplPath` using `data`.";
     with open(tplPath, "r") as f:
-        return renderStr(f.read(), data,   variable  , tagMap);
+        return renderStr(f.read(), data, variable, tagMap);
+
+# End ######################################################
