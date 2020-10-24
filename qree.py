@@ -1,18 +1,14 @@
 """
 Qree: Tiny but mighty Python templating.
 Copyright (c) 2020 Polydojo, Inc.
-Qree may be freely distributed under the MIT license.
-For additional licensing details, see:
-https://github.com/polydojo/qree/blob/master/LICENSE.txt
 """;
 
 import functools;
 
-__version__ = "0.0.2-preview";  # Req'd by flit.
+__version__ = "0.0.2";  # Req'd by flit.
 __DEFAULT_TAG_MAP__ = { "@=": "@=",  "@{": "@{",  "@}": "@}",
     "{{:": "{{:",  ":}}": ":}}",  "{{=": "{{=",  "=}}": "=}}",
 };
-
 escapeHtml = lambda s: (str(s).replace("&", "&amp;").replace("<", "&lt;")
     .replace(">", "&gt;").replace('"', "&quot;").replace("'", "&#x27;")          # TODO: Consider: .replace("`", "&#x60;")
 );
@@ -20,7 +16,8 @@ escapeHtml = lambda s: (str(s).replace("&", "&amp;").replace("<", "&lt;")
 def dictDefaults (dicty, defaults):
     "Fills-in missing keys in `dicty` with those from `defaults`.";
     for k in defaults:
-        if k not in dicty: dicty[k] = defaults[k];
+        if k not in dicty:
+            dicty[k] = defaults[k];
     return dicty;
 
 def roughValidateTagPair (tplStr, opTag, clTag):
@@ -76,17 +73,25 @@ def renderStr (tplStr, data=None, variable="data", tagMap=None):
     fn = execEval(fnStr);
     return fn(data);
 
-def renderPath (path, data=None, variable="data", tagMap=None):
-    "Render template at `path` using `data`.";
-    with open(path, "r") as f:
+def renderPath (tplPath, data=None, variable="data", tagMap=None):
+    "Render template at path `tplPath` using `data`.";
+    with open(tplPath, "r") as f:
         return renderStr(f.read(), data, variable, tagMap);
 
-def view (path, variable="data", tagMap=None):
+def view (tplPath, variable="data", tagMap=None):
+    "Returns a decorator for binding function to template at `tplPath`.";
     def decorator (fn):
         @functools.wraps(fn)
         def wrapper (*a, **ka):
-            return renderPath(path, fn(*a, **ka), variable, tagMap);
+            return renderPath(tplPath, fn(*a, **ka), variable, tagMap);
         return wrapper;
     return decorator;
+
+#TODO:
+#checkNonPathy = lambda s: "\n" in s or "{" in s or "@" in s;
+#def render (s, data=None, variable="data", tagMap=None):
+#    "Wr";
+#    renderFn = renderStr if checkNonPathy(s) else renderPath;
+#    return renderFn(s, data, variable, tagMap);
 
 # End ######################################################

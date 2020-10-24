@@ -1,21 +1,23 @@
-
-
-
-
-
 # Qree
 
 Qree (read 'Curie') is a tiny but mighty Python templating engine, geared toward HTML. 'Qree' is short for: *Q*uote, *r*eplace, *e*xec(), *e*val().
 
-Qree is a single python module, under 100 lines of code. Instead of using regular expressions or PEGs, Qree relies on Python's `exec()` and `eval()`.
+Qree is a single module, under 100 lines of code. Instead of using regular expressions or PEGs, Qree relies on Python's `exec()` and `eval()`.  
 
-It supports all Python language features. Targeted toward Python 3.6+ and Python 2.7+.
+**Warning:** As Qree uses `exec()`, it should **NOT** be used to render untrusted templates.
+
+Qree supports all Python language features and is targeted toward Python 2.7+ and Python 3.6+.
+
+**Quick Plug:** Qree built and maintained by the folks at [Polydojo, Inc.](https://www.polydojo.com/) If you're looking for a simple project management tool, please check out our latest product: [BoardBell.com](https://www.boardbell.com/).
 
 ## Installation:
-Please download `qree.py` into your project directory. Then, `import qree` as required.
+```
+pip install qree
+```
+Alternatively, just download `qree.py` into your project directory. Then, `import qree` as required.
 
 ## Text Interpolation:
-Use `{{: expression :}}` for HTML-escaped interpolation, or `{{= expression =}}` for interpolation *without* escaping. The latter is susceptible to XSS, so please be careful with it. Here are a few quick examples:
+Use `{{: expression :}}` for HTML-escaped interpolation, or `{{= expression =}}` for interpolation *without* escaping. The latter is susceptible to XSS, so please be careful. Here are a few quick examples:
 
 **1. Hello, World!:**
 ```py
@@ -40,6 +42,7 @@ qree.renderStr("<h2>Mr. {{: data :}}", data="<b> Villain </b> ")
 qree.renderStr("<h2>Mr. {{= data =}}", data="<b> Villain </b> ")
 # Output: <h2>Mr. <b> Villain </b> </h2>
 ```
+
 **5. Longer Example:**
 ```py
 qree.render("""
@@ -75,7 +78,7 @@ qree.render("""
 ## Python Code:
 Any line beginning with `@=` is treated as Python code. (Preceding whitespace is ignored.)  You can write any python code you wish. You can define variables, import modules, etc. For example:
 
-#### Leap Year Detection Using `lambda`:
+#### Leap Year Detection (with `lambda`):
 ```py
 tplStr = """
 @= isLeap = lambda n: (n % 400 == 0) or (n % 100 != 0 and n % 4 == 0)
@@ -91,9 +94,9 @@ qree.renderStr(tplStr, data{"year": 2001})
 
 ## Python Indentation:
 
-Python is an indented language. Use the special tags `@{` and `@}` for indicating indentation and de-indentation to Qree, respectively. When used, such a tag should appear by itself on a separate line. For example:
+Python is an indented language. Use the special tags `@{` and `@}` for respectively indicating indentation and de-indentation to Qree. When used, such a tag should appear by itself on a separate line. For example:
 
-#### Example: Leap Year (with `def`):
+#### Leap Year Detection (with `def`):
 ```py
 tplStr = """
 @= def isLeap (n):
@@ -112,7 +115,7 @@ qree.renderStr(tplStr, data{"year": 2001})
 # Output: The year 2001 is NOT a leap year.
 ```
 
-#### Example: FizzBuzz
+#### FizzBuzz Example
 FizzBuzz is a popular programming assignment. The idea is to print consecutive numbers per line, but instead to print `'Fizz'` for multiples of 3, `'Buzz'` for multiples of 5, and `'FizzBuzz'` for multiples of 3 and 5.
 
 ```py
@@ -170,7 +173,7 @@ qree.renderStr("Hi {{: name :}}!", data="Jim", variable="name")
 ```
 
 ## Template Files:
-It's always convenient to store templates in (or rather, as) separate files. To work with files, use `qree.renderPath(tplPath, data, ...)` instead of `qree.renderStr(tplStr, data, ...)`. 
+It's always convenient to store templates using separate files. To work with files, use `qree.renderPath(tplPath, data, ...)` instead of `qree.renderStr(tplStr, data, ...)`. 
 
 #### Basic Example:
 
@@ -345,8 +348,9 @@ The default values for each of the tags is as specified in the dict below.
 ```
 
 ## View Decorator
-When working with [Flask](https://flask.palletsprojects.com/en/1.1.x/), [Bottle] or a similar WSGI framework, `qree.view` can help bind route handlers to templates. 
+If you're working with [Flask](https://flask.palletsprojects.com/), [Bottle](https://bottlepy.org/) or a similar WSGI framework, `qree.view` can help bind route to templates. 
 ```py
+@app.route("/user-list")
 @qree.view("./views/user-list.html", variable="userList")
 def serve_userLsit ():
     userList = yourLogicHere();
@@ -354,6 +358,7 @@ def serve_userLsit ():
 ```
 The above is identical to the following:
 ```py
+@app.route("/user-list")
 @qree.view("./views/user-list.html" variable="userList")
 def serve_user_list_page ():
     userList = yourLogicHere();
@@ -361,6 +366,7 @@ def serve_user_list_page ():
         data=userList, variable="userList",
     );
 ```
+**Custom Tags:** Like with `qree.renderPath(.)`, you can use custom tags with `qree.view(.)` by supplying `tagMap`.
 
 ## License
-Qree may be freely distributed under the MIT license. See LICENSE.txt for more details.
+Qree may be freely distributed under the MIT license. See [LICENSE.txt](https://github.com/polydojo/qree/blob/master/LICENSE.txt) for more details.
