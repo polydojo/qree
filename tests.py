@@ -55,3 +55,9 @@ print(qree.renderPath("./test-views/homepage.html", {
     "title": "Ich bin die Title!",
     "body": "Und ich bin der Body! ...",
 }));
+
+print('----------------------------------------------');
+@qree.view("./test-views/homepage.html")
+def homepage ():
+    return {"title": "... TITLE 2 ...", "body": "... BODY 2..."};
+print(homepage());

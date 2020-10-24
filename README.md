@@ -1,5 +1,8 @@
 
 
+
+
+
 # Qree
 
 Qree (read 'Curie') is a tiny but mighty Python templating engine, geared toward HTML. 'Qree' is short for: *Q*uote, *r*eplace, *e*xec(), *e*val().
@@ -137,26 +140,26 @@ qree.renderStr("""
 ```
 \# Output:
 ```
-    1
-    2
-    Fizz
-    4
-    Buzz
-    Fizz
-    7
-    8
-    Fizz
-    Buzz
-    11
-    Fizz
-    13
-    14
-    FizzBuzz
-    16
-    17
-    Fizz
-    19
-    Buzz
+        1
+        2
+        Fizz
+        4
+        Buzz
+        Fizz
+        7
+        8
+        Fizz
+        Buzz
+        11
+        Fizz
+        13
+        14
+        FizzBuzz
+        16
+        17
+        Fizz
+        19
+        Buzz
 ```
 
 ## The `data` variable:
@@ -293,6 +296,71 @@ Now, the output should be:
 ```
 
 In the above example, we passed `data=None` to each nested template. But do realize that we could've passed anything. It's totally up to us. Additionally, as `data=None` is the default, we could've chosen to ignore the `data` parameter.
+
+
+## Custom Tags (via `tagMap`)
+
+Default tags like `{{:`, `:}}`, `@=`, etc. can each be customized via the `tagMap` parameter. Using `tagMap`, just supply your desired tag as the value against the default tag as key. A few examples follow:
+
+#### 1. `[[:` Square `:]]` Brackets Instead Of `{{:` Braces `:}}`
+```py
+qree.renderStr(
+    tplStr="Hello, [[: data.title().rstrip('!') + '!' :]]",
+    data="world",
+    tagMap = {
+        "{{:": "[[:",
+        ":}}": ":]]",
+        "{{=": "[[=",   # <-- Not directly used in this example.
+        "=}}": "=]]",   # <---^
+})
+# Output: Hello, World!
+```
+
+#### 2. Percentage Sign For Code Blocks (`%` vs  `@`)
+```py
+tplStr = """
+%= isLeap = lambda n: (n % 400 == 0) or (n % 100 != 0 and n % 4 == 0)
+%= isOrIsNot = "IS" if isLeap(data['year']) else "is NOT"
+The year {{: data['year'] :}} {{: isOrIsNot :}} a leap year.
+"""
+qree.renderStr(tplStr, data={"year": 2020}, tagMap = {
+    "@=": "%=",
+    "@{": "%{",   # <-- Not directly used in this example.
+    "@}": "%}",   # <--^
+})
+# Output: The year 2020 IS a leap year.
+```
+
+### Default `tagMap`
+The default values for each of the tags is as specified in the dict below.
+```py
+{   "@=": "@=",
+    "@{": "@{",
+    "@}": "@}",
+    "{{=": "{{=", 
+    "=}}": "=}}",
+    "{{:": "{{:",
+    ":}}": ":}}",
+}
+```
+
+## View Decorator
+When working with [Flask](https://flask.palletsprojects.com/en/1.1.x/), [Bottle] or a similar WSGI framework, `qree.view` can help bind route handlers to templates. 
+```py
+@qree.view("./views/user-list.html", variable="userList")
+def serve_userLsit ():
+    userList = yourLogicHere();
+    return userList;
+```
+The above is identical to the following:
+```py
+@qree.view("./views/user-list.html" variable="userList")
+def serve_user_list_page ():
+    userList = yourLogicHere();
+    return qree.renderPath("./views/user-list.html",
+        data=userList, variable="userList",
+    );
+```
 
 ## License
 Qree may be freely distributed under the MIT license. See LICENSE.txt for more details.

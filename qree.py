@@ -2,29 +2,25 @@
 Qree: Tiny but mighty Python templating.
 Copyright (c) 2020 Polydojo, Inc.
 Qree may be freely distributed under the MIT license.
-For more licensing details, visit:
+For additional licensing details, see:
 https://github.com/polydojo/qree/blob/master/LICENSE.txt
 """;
 
-__version__ = "0.0.1";
+import functools;
 
-DEFAULT_TAG_MAP = { "@=": "@=",  "@{": "@{",  "@}": "@}",
+__version__ = "0.0.2-preview";  # Req'd by flit.
+__DEFAULT_TAG_MAP__ = { "@=": "@=",  "@{": "@{",  "@}": "@}",
     "{{:": "{{:",  ":}}": ":}}",  "{{=": "{{=",  "=}}": "=}}",
 };
 
-def escapeHtml (s):
-    "Simple HTML escaper.";
-    return (str(s).replace("&", "&amp;")
-        .replace("<", "&lt;").replace(">", "&gt;")
-        .replace('"', "&quot;").replace("'", "&#x27;")
-        .replace("`", "&#x60;")
-    );
+escapeHtml = lambda s: (str(s).replace("&", "&amp;").replace("<", "&lt;")
+    .replace(">", "&gt;").replace('"', "&quot;").replace("'", "&#x27;")          # TODO: Consider: .replace("`", "&#x60;")
+);
 
 def dictDefaults (dicty, defaults):
     "Fills-in missing keys in `dicty` with those from `defaults`.";
     for k in defaults:
-        if k not in dicty:
-            dicty[k] = defaults[k];
+        if k not in dicty: dicty[k] = defaults[k];
     return dicty;
 
 def roughValidateTagPair (tplStr, opTag, clTag):
@@ -44,14 +40,14 @@ def roughValidateTplStr (tplStr, tagMap):
 
 def quoteReplace (tplStr, variable="data", tagMap=None):
     "Returns as string, the function-equivalent of `tplStr`.";
-    tagMap = dictDefaults(tagMap or {}, DEFAULT_TAG_MAP);
+    tagMap = dictDefaults(tagMap or {}, __DEFAULT_TAG_MAP__);
     assert roughValidateTplStr(tplStr, tagMap);
     fnStr = "def templateFn (%s):\n" % variable;
     indentVal = 4;
     indentify = lambda: " " * indentVal;
     fnStr += indentify() + "from qree import escapeHtml as __qree__esc__html__;\n";
     fnStr += indentify() + "output = '';\n";
-    for line in tplStr.splitlines(keepends=True):
+    for line in tplStr.splitlines(True):
         lx = line.lstrip();
         if lx.startswith(tagMap["@="]):
             fnStr += indentify() + lx[2:].strip() + "\n";
@@ -61,10 +57,10 @@ def quoteReplace (tplStr, variable="data", tagMap=None):
             indentVal -= 4;
         else:
             fnStr += indentify() + "output += " + "'''" +  (line
-                .replace(tagMap["{{:"],  "''' + __qree__esc__html__(")
-                .replace(tagMap[":}}"],  ") + '''")
                 .replace(tagMap["{{="],  "''' + str(")
                 .replace(tagMap["=}}"],  ") + '''")
+                .replace(tagMap["{{:"],  "''' + __qree__esc__html__(")
+                .replace(tagMap[":}}"],  ") + '''")
             ) + "''';\n";
     fnStr += indentify() + "return output;\n";
     return fnStr;
@@ -80,9 +76,17 @@ def renderStr (tplStr, data=None, variable="data", tagMap=None):
     fn = execEval(fnStr);
     return fn(data);
 
-def renderPath (tplPath, data=None, variable="data", tagMap=None):
-    "Render template at path `tplPath` using `data`.";
-    with open(tplPath, "r") as f:
+def renderPath (path, data=None, variable="data", tagMap=None):
+    "Render template at `path` using `data`.";
+    with open(path, "r") as f:
         return renderStr(f.read(), data, variable, tagMap);
+
+def view (path, variable="data", tagMap=None):
+    def decorator (fn):
+        @functools.wraps(fn)
+        def wrapper (*a, **ka):
+            return renderPath(path, fn(*a, **ka), variable, tagMap);
+        return wrapper;
+    return decorator;
 
 # End ######################################################
