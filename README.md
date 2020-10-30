@@ -1,22 +1,21 @@
-# Qree
+Qree
+====
 
 Qree (read 'Curie') is a tiny but mighty Python templating engine, geared toward HTML. 'Qree' is short for: *Q*uote, *r*eplace, *e*xec(), *e*val().
 
-Qree is a single module, under 100 lines of code. Instead of using regular expressions or PEGs, Qree relies on Python's `exec()` and `eval()`.  
+The whole thing is under 100 lines of code. Instead of using regular expressions or PEGs, Qree relies on Python's `exec()` and `eval()`. Thus, it supports *all language features*, out of the box.
 
-**Warning:** As Qree uses `exec()`, it should **NOT** be used to render untrusted templates.
+**Warning:** Do ***NOT*** use Qree to render untrusted templates.
 
-Qree supports all Python language features and is targeted toward Python 2.7+ and Python 3.6+.
-
-**Quick Plug:** Qree built and maintained by the folks at [Polydojo, Inc.](https://www.polydojo.com/) If you're looking for a simple project management tool, please check out our latest product: [BoardBell.com](https://www.boardbell.com/).
-
-## Installation:
+Installation
+--------------
 ```
 pip install qree
 ```
-Alternatively, just download `qree.py` into your project directory. Then, `import qree` as required.
+Alternatively, just download `qree.py` into your project directory.
 
-## Text Interpolation:
+Text Interpolation
+----------------------
 Use `{{: expression :}}` for HTML-escaped interpolation, or `{{= expression =}}` for interpolation *without* escaping. The latter is susceptible to XSS, so please be careful. Here are a few quick examples:
 
 **1. Hello, World!:**
@@ -62,7 +61,7 @@ qree.render("""
 })
 ```
 \# Output:
-```
+```html
 <!doctype html>
 <html>
 <head>
@@ -75,10 +74,11 @@ qree.render("""
 </html>
 ```
 
-## Python Code:
-Any line beginning with `@=` is treated as Python code. (Preceding whitespace is ignored.)  You can write any python code you wish. You can define variables, import modules, etc. For example:
+Python Code
+----------------
+Any line beginning with `@=` is treated as Python code. (Preceding whitespace is ignored.)  You can write **any code** you wish, as Qree supports all language features. You can define variables, import modules, make assertions etc. For example:
 
-#### Leap Year Detection (with `lambda`):
+**Leap Year Detection (with `lambda`):**
 ```py
 tplStr = """
 @= isLeap = lambda n: (n % 400 == 0) or (n % 100 != 0 and n % 4 == 0)
@@ -89,14 +89,15 @@ qree.renderStr(tplStr, data={"year": 2000})
 # Output: The year 2000 IS a leap year.
 
 qree.renderStr(tplStr, data{"year": 2001})
-# Output: The year 2001 IS NOT a leap year.
+# Output: The year 2001 is NOT a leap year.
 ```
 
-## Python Indentation:
+Python Indentation
+------------------------
 
 Python is an indented language. Use the special tags `@{` and `@}` for respectively indicating indentation and de-indentation to Qree. When used, such a tag should appear by itself on a separate line. For example:
 
-#### Leap Year Detection (with `def`):
+**Leap Year Detection (with `def`):**  
 ```py
 tplStr = """
 @= def isLeap (n):
@@ -115,7 +116,7 @@ qree.renderStr(tplStr, data{"year": 2001})
 # Output: The year 2001 is NOT a leap year.
 ```
 
-#### FizzBuzz Example
+**FizzBuzz Example**  
 FizzBuzz is a popular programming assignment. The idea is to print consecutive numbers per line, but instead to print `'Fizz'` for multiples of 3, `'Buzz'` for multiples of 5, and `'FizzBuzz'` for multiples of 3 and 5.
 
 ```py
@@ -165,17 +166,17 @@ qree.renderStr("""
         Buzz
 ```
 
-## The `data` variable:
+The `data` Variable
+-------------------------
 By default, data passed via the `data` parameter is available in the template as the `data` variable. However, if you'd like to change the variable name, you may do so via the `variable` parameter. For example:
 ```py
 qree.renderStr("Hi {{: name :}}!", data="Jim", variable="name")
 # Output: Hi Jim!
 ```
 
-## Template Files:
+Template Files
+------------------
 It's always convenient to store templates using separate files. To work with files, use `qree.renderPath(tplPath, data, ...)` instead of `qree.renderStr(tplStr, data, ...)`. 
-
-#### Basic Example:
 
 Let's say you have the following directory structure:
 ```
@@ -225,7 +226,12 @@ In either case, the output would be:
 <html>
 ```
 
-## Nesting Templates:
+Quick Plug
+--------------
+Qree built and maintained by the folks at [Polydojo, Inc.](https://www.polydojo.com/), led by Sumukh Barve. If your team is looking for a simple project management tool, please check out our latest product: [**BoardBell.com**](https://www.boardbell.com/).
+
+Template Nesting
+----------------------
 Since templates can include any Python code, you can call `qree.renderPath()` from within a template! Consider the following directory structure:
 ```
 - app.py
@@ -276,7 +282,7 @@ def serve_homepage ():
         "body": "And the body goes here ...",
     });
 ```
-Now, the output should be:
+The output should now be:
 ```html
 <doctype html>
 <html>
@@ -298,14 +304,15 @@ Now, the output should be:
 <html>
 ```
 
-In the above example, we passed `data=None` to each nested template. But do realize that we could've passed anything. It's totally up to us. Additionally, as `data=None` is the default, we could've chosen to ignore the `data` parameter.
+In the above example, we explicitly passed `data=None` to each nested template. We could've passed any value. We could've even ignored the `data` parameter, as it defaults to `None` anyway.
 
 
-## Custom Tags (via `tagMap`)
+Custom Tags (via `tagMap`)
+---------------------------------
 
 Default tags like `{{:`, `:}}`, `@=`, etc. can each be customized via the `tagMap` parameter. Using `tagMap`, just supply your desired tag as the value against the default tag as key. A few examples follow:
 
-#### 1. `[[:` Square `:]]` Brackets Instead Of `{{:` Braces `:}}`
+**1. `[[:` Square `:]]` Brackets Instead Of `{{:` Braces `:}}`**
 ```py
 qree.renderStr(
     tplStr="Hello, [[: data.title().rstrip('!') + '!' :]]",
@@ -319,7 +326,7 @@ qree.renderStr(
 # Output: Hello, World!
 ```
 
-#### 2. Percentage Sign For Code Blocks (`%` vs  `@`)
+**2. Percentage Sign For Code Blocks (`%` vs  `@`)**
 ```py
 tplStr = """
 %= isLeap = lambda n: (n % 400 == 0) or (n % 100 != 0 and n % 4 == 0)
@@ -334,7 +341,7 @@ qree.renderStr(tplStr, data={"year": 2020}, tagMap = {
 # Output: The year 2020 IS a leap year.
 ```
 
-### Default `tagMap`
+**Default `tagMap`:**
 The default values for each of the tags is as specified in the dict below.
 ```py
 {   "@=": "@=",
@@ -347,26 +354,46 @@ The default values for each of the tags is as specified in the dict below.
 }
 ```
 
-## View Decorator
+View Decorator
+--------------------
 If you're working with [Flask](https://flask.palletsprojects.com/), [Bottle](https://bottlepy.org/) or a similar WSGI framework, `qree.view` can help bind route to templates. 
 ```py
 @app.route("/user-list")
 @qree.view("./views/user-list.html", variable="userList")
-def serve_userLsit ():
+def serve_userList ():
     userList = yourLogicHere();
     return userList;
 ```
 The above is identical to the following:
 ```py
 @app.route("/user-list")
-@qree.view("./views/user-list.html" variable="userList")
 def serve_user_list_page ():
     userList = yourLogicHere();
     return qree.renderPath("./views/user-list.html",
         data=userList, variable="userList",
     );
 ```
-**Custom Tags:** Like with `qree.renderPath(.)`, you can use custom tags with `qree.view(.)` by supplying `tagMap`.
 
-## License
-Qree may be freely distributed under the MIT license. See [LICENSE.txt](https://github.com/polydojo/qree/blob/master/LICENSE.txt) for more details.
+**Vilo:**  
+Using [Vilo](https://github.com/polydojo/vilo) instead of Flask/Bottle? Great choice! Qree jives with Vilo:
+```py
+@app.route("GET", "/user-list")
+@qree.view("./views/user-list.html", variable="userList")
+def serve_userList (req, res):
+    userList = yourLogicHere(req);
+    return userList;
+```
+
+**Custom Tags:**  
+Like with `qree.renderPath(.)` and `qree.renderStr(.)`, you can use custom tags with `qree.view(.)` by passing `tagMap`.
+
+
+Licensing
+------------
+Copyright (c) 2020 Polydojo, Inc.
+
+**Software Licensing:**  
+The software is released "AS IS" under the **MIT license**, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED. Kindly see [LICENSE.txt](https://github.com/polydojo/qree/blob/master/LICENSE.txt) for more details.
+
+**No Trademark Rights:**  
+The above software licensing terms **do not** grant any right in the trademarks, service marks, brand names or logos of Polydojo, Inc.
