@@ -3,9 +3,9 @@ Qree
 
 Qree (read 'Curie') is a tiny but mighty Python templating engine, geared toward HTML. 'Qree' is short for: *Q*uote, *r*eplace, *e*xec(), *e*val().
 
-The whole thing is under 100 lines of code. Instead of using regular expressions or PEGs, Qree relies on Python's `exec()` and `eval()`. Thus, it supports *all language features*, out of the box.
+The whole thing is under 200 lines of code. Instead of using regular expressions or PEGs, Qree relies on Python's `exec()` and `eval()`. Thus, it supports *all language features*, out of the box.
 
-**Warning:** Do ***NOT*** use Qree to render untrusted templates.
+**!!! Warning:** Do **NOT** render untrusted templates. As Qree uses `eval()`, rendering untrusted templates is equivalent to giving untrusted entities access to your entire systems.
 
 Installation
 --------------
@@ -16,7 +16,7 @@ Alternatively, just download `qree.py` into your project directory.
 
 Text Interpolation
 ----------------------
-Use `{{: expression :}}` for HTML-escaped interpolation, or `{{= expression =}}` for interpolation *without* escaping. The latter is susceptible to XSS, so please be careful. Here are a few quick examples:
+Use `{{: expression :}}` for HTML-escaped interpolation, or `{{= expression =}}` for interpolation *without* escaping. The latter is *susceptible to XSS*, so please be careful. Here are a few quick examples:
 
 **1. Hello, World!:**
 ```py
@@ -26,25 +26,25 @@ qree.renderStr("<h2>Hello, {{: data :}}", data="World!")
 
 **2. Using Expressions:**
 ```py
-qree.renderStr("<h2>Mr. {{: data.title() + "!" :}}", data="bond")
+qree.renderStr("<h2>Mr. {{: data.title() + '!' :}}", data="bond")
 # Output: <h2>Mr. Bond!</h2>
 ```
 
 **3.  HTML Escaping:**
 ```py
-qree.renderStr("<h2>Mr. {{: data :}}", data="<b> Villain </b> ")
-# Output: <h2>Mr. &lt;b&gt; Villain &lt;/b&gt; </h2>
+qree.renderStr("Mr. {{: data :}}", data="<b> Villain </b>")
+# Output: Mr. &lt;b&gt; Villain &lt;/b&gt;
 ```
 
 **4. Without Escaping:**
 ```py
-qree.renderStr("<h2>Mr. {{= data =}}", data="<b> Villain </b> ")
-# Output: <h2>Mr. <b> Villain </b> </h2>
+qree.renderStr("Mr. {{= data =}}", data="<b> Villain </b>")
+# Output: Mr. <b> Villain </b>
 ```
 
 **5. Longer Example:**
 ```py
-qree.render("""
+qree.renderStr("""
 <!doctype html>
 <html>
 <head>
@@ -72,6 +72,7 @@ qree.render("""
     <pre>Lorem ipsum dolor sit amet, ... elit.</pre>
 </body>
 </html>
+
 ```
 
 Python Code
@@ -88,14 +89,14 @@ The year {{: data['year'] :}} {{: isOrIsNot :}} a leap year.
 qree.renderStr(tplStr, data={"year": 2000})
 # Output: The year 2000 IS a leap year.
 
-qree.renderStr(tplStr, data{"year": 2001})
+qree.renderStr(tplStr, data={"year": 2001})
 # Output: The year 2001 is NOT a leap year.
 ```
 
 Python Indentation
 ------------------------
 
-Python is an indented language. Use the special tags `@{` and `@}` for respectively indicating indentation and de-indentation to Qree. When used, such a tag should appear by itself on a separate line. For example:
+Python is an indented language. Use the special tags `@{` and `@}` for respectively indicating indentation and de-indentation to Qree. When used, such a tag *should appear by itself on a separate line*, ignoring whitespace and trailing Python comments. For example:
 
 **Leap Year Detection (with `def`):**  
 ```py
@@ -112,7 +113,7 @@ The year {{: data['year'] :}} {{: isOrIsNot :}} a leap year.
 qree.renderStr(tplStr, data={"year": 2000})
 # Output: The year 2000 IS a leap year.
 
-qree.renderStr(tplStr, data{"year": 2001})
+qree.renderStr(tplStr, data={"year": 2001})
 # Output: The year 2001 is NOT a leap year.
 ```
 
@@ -164,6 +165,7 @@ qree.renderStr("""
         Fizz
         19
         Buzz
+
 ```
 
 The `data` Variable
@@ -224,11 +226,12 @@ In either case, the output would be:
 <pre>And the body goes here ...</pre>
 </body>
 <html>
+
 ```
 
 Quick Plug
 --------------
-Qree built and maintained by the folks at [Polydojo, Inc.](https://www.polydojo.com/), led by Sumukh Barve. If your team is looking for a simple project management tool, please check out our latest product: [**BoardBell.com**](https://www.boardbell.com/).
+Qree built and maintained by the folks at [Polydojo, Inc.](https://www.polydojo.com/), led by [Sumukh Barve](https://www.sumukhbarve.com/). If your team is looking for a simple project management tool, please check out our latest product: [**BoardBell.com**](https://www.boardbell.com/).
 
 Template Nesting
 ----------------------
@@ -262,14 +265,15 @@ And similarly, `footer.html`:
 Now, you can use `header.html` and `footer.html` in `homepage.html`:
 ```html
 @= import qree;
+@= import qree;
 <doctype html>
 <html>
 <head><title>{{: data['title'] :}}</title></head>
 <body>
-{{= qree.renderPath("./views/header.html", data=None) =}}
+{{= qree.renderPath("./test-views/header.html", data=None) =}}
 <h2>{{: data['title'] :}}</h2>
 <pre>{{: data['body'] :}}</pre>
-{{= qree.renderPath("./views/footer.html", data=None) =}}
+{{= qree.renderPath("./test-views/footer.html", data=None) =}}
 </body>
 <html>
 ```
@@ -282,26 +286,29 @@ def serve_homepage ():
         "body": "And the body goes here ...",
     });
 ```
-The output should now be:
+The output is:
 ```html
 <doctype html>
 <html>
-<head><title>The TITLE Goes Here!</title></head>
+<head><title>... TITLE 2 ...</title></head>
 <body>
 <header class="header">
     <a href="/link1">Link 1</a>
     <a href="/link2">Link 2</a>
     <a href="/link3">Link 3</a>
 </header>
-<h2>The TITLE Goes Here!</h2>
-<pre>And the body goes here ...</pre>
+
+<h2>... TITLE 2 ...</h2>
+<pre>... BODY 2 ...</pre>
 <footer class="footer">
     <a href="/linkA">Link A</a>
     <a href="/linkB">Link B</a>
     <a href="/linkC">Link C</a>
 </footer>
+
 </body>
 <html>
+
 ```
 
 In the above example, we explicitly passed `data=None` to each nested template. We could've passed any value. We could've even ignored the `data` parameter, as it defaults to `None` anyway.

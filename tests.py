@@ -1,63 +1,210 @@
 import qree;
+import pytest;
 
-# TODO: Implement proper tests.
+# Run tests with:
+#       pytest tests.py -vv
 
+def test_identity ():
+    assert qree.renderStr("plain") == "plain";
+    assert qree.renderStr('foo\nbar\nbaz') == 'foo\nbar\nbaz';
 
-print('----------------------------------------------');
-print(qree.renderStr("foo\nbar\nbaz"));
+def test_basic_substitution ():
+    tpl = "Hello, {{: data + '!' :}}";
+    assert qree.renderStr(tpl, "World") == 'Hello, World!';
+    assert qree.renderStr(tpl, "> World") == 'Hello, &gt; World!';
+    tpl2 = "Hello, {{= data + '!' =}}";
+    assert qree.renderStr(tpl2, "World") == 'Hello, World!';
+    assert qree.renderStr(tpl2, "> World") == 'Hello, > World!';
 
-print('----------------------------------------------');    
-print(qree.renderStr(
-    "<h1>Hello {{: data['name'] :}}</h2>",
-    {"name": 'World'},
-));
+def test_nonPyQuotesOk ():
+    "Test that single-quotes _outside_ py-code are OK.";
+    qree.renderStr("Trip ''' quotes") == "Trip ''' quotes";
+    qree.renderStr("'{{: data :}}'", None) == "'None'";
 
-print('----------------------------------------------');    
-print(qree.renderStr("""
-    <ul>
-    @= for user in data['userList']:
-    @{
-        <li>
-            <p>Colon para for: {{: user['name'] :}}</p>
-            <p>Equal para for: {{= user['name'] =}}</p>
-        </li>
-    @}
-    </ul>
-""", {
-    "userList": [{"name": "king"}, {"name": "<b>kong</b>"}],
-}));
+def test_pyQuotesOk ():
+    "Test that single-quotes _within_ py-code are OK.";
+    qree.renderStr("{{: data['foo'] :}}", {"foo": "bar"}) == "bar";
+    qree.renderStr("{{: data['''foo'''] :}}", {"foo": "bar"}) == "bar";
 
-print('----------------------------------------------');
-print(qree.renderStr("""
-    @= for n in range(1, data):
-    @{
-        @= if n % 3 == 0 and n % 5 == 0:
+def test_substitution_tag_error ():
+    badTplList =[
+        "Hello, {{: data + '!' ]]",             # Unclosed
+        "Hello, {{= {{: data + '!' :}} =}}",    # Nesting banned
+        "Hello, {{: {{= data + '!' =}} :}}",
+        """
+        @= import qree;
+        {{: qree.renderStr('{{= data.title() =}}', data=data) :}}
+        """,
+    ];
+    for badTpl in badTplList:
+        with pytest.raises(SyntaxError):
+            qree.renderStr(badTpl, "World");
+
+def test_indent_tag_error ():
+    badTplList = [
+        # 1, 2 :
+        "@{", "@}",
+        # --------------------------
+        # 3:
+        """
+        @= if True:
         @{
-            {{:n:}} Fizz! Buzz!
+            Unclosed indent.
+        #
+        """,
+        # --------------------------
+        # 4:
+        """
+        @= if True:
+        #
+            Unopened indent.
+        @}
+        """,
+        # --------------------------
+        # 5:
+        """
+        @= if True:
+        @{
+            if True:
+            @{
+                Unclosed inner indent.
+            #
+        @}
+        """,
+        # --------------------------
+        # 6:
+        """
+        @= if True:
+        @{ Non-comment line along w/ open-indent.
+        @}
+        """,
+        # --------------------------
+        # 7:
+        """
+        @= if True:
+        @{
+        @} Non-comment line along w/ close-indent.
+        """,
+    ];
+    assert len(badTplList) == 7;
+    for badTpl in badTplList:
+        with pytest.raises(IndentationError):
+            print(qree.renderStr(badTpl, data=None));
+
+def test_basic_indent ():
+    tpl = """
+    @= for n in range(1, data+1):
+    @{
+        {{: n :}} is {{: 'EVEN' if n % 2 == 0 else 'ODD' :}}
+    @}
+    """;
+    expected = """
+        1 is ODD
+        2 is EVEN
+        3 is ODD
+        4 is EVEN
+    """;
+    assert qree.renderStr(tpl, data=4) == expected;
+
+def test_nested_indent ():
+    tpl = """
+    @= for n in range(1, data+1):
+    @{
+        @= if n % 15 == 0:
+        @{  # Comment w/ indent-open.
+            FizzBuzz!
         @}
         @= elif n % 3 == 0:
         @{
-            {{:n:}} Fizz!
-        @}
+            Fizz!
+        @}  # Comment w/ indent-close.
         @= elif n % 5 == 0:
         @{
-            {{:n:}} Buzz!
+            Buzz!
         @}
         @= else:
         @{
-            {{:n:}}
+            {{: n :}}
         @}
     @}
-""", data=16));
+    """;
+    expected = """
+            1
+            2
+            Fizz!
+            4
+            Buzz!
+            Fizz!
+            7
+            8
+            Fizz!
+            Buzz!
+            11
+            Fizz!
+            13
+            14
+            FizzBuzz!
+    """;
+    assert qree.renderStr(tpl, data=15) == expected;
+    
 
-print('----------------------------------------------');
-print(qree.renderPath("./test-views/homepage.html", {
-    "title": "Ich bin die Title!",
-    "body": "Und ich bin der Body! ...",
-}));
+def test_renderPath_basic_plus_with_view ():
+    footerPath = "./test-views/footer.html";
+    expectedFooter = "\n".join([
+        '<footer class="footer">',
+        '    <a href="/linkA">Link A</a>',
+        '    <a href="/linkB">Link B</a>',
+        '    <a href="/linkC">Link C</a>',
+        '</footer>',
+        '', # <-- Qree seems to like adding trailing newlines.
+    ]);
+    print(repr(expectedFooter));
+    print(repr(qree.renderPath(footerPath)));
+    assert qree.renderPath(footerPath) == expectedFooter;
+    
+    @qree.view(footerPath)
+    def serveFooter ():
+        return None;
+    assert serveFooter() == expectedFooter;
 
-print('----------------------------------------------');
-@qree.view("./test-views/homepage.html")
-def homepage ():
-    return {"title": "... TITLE 2 ...", "body": "... BODY 2..."};
-print(homepage());
+
+def test_renderPath_nested_plus_with_view ():
+    homepagePath = "./test-views/homepage.html";
+    data = {
+        "title": "... TITLE 2 ...",
+        "body": "... BODY 2 ...",
+    }
+    expectedHomepage = "\n".join([
+        '<doctype html>',
+        '<html>',
+        '<head><title>... TITLE 2 ...</title></head>',
+        '<body>',
+        '<header class="header">',
+        '    <a href="/link1">Link 1</a>',
+        '    <a href="/link2">Link 2</a>',
+        '    <a href="/link3">Link 3</a>',
+        '</header>',
+        '',                             # <-- \n via nested call.
+        '<h2>... TITLE 2 ...</h2>',
+        '<pre>... BODY 2 ...</pre>',
+        '<footer class="footer">',
+        '    <a href="/linkA">Link A</a>',
+        '    <a href="/linkB">Link B</a>',
+        '    <a href="/linkC">Link C</a>',
+        '</footer>',
+        '',                             # <-- \n via nested call.
+        '</body>',
+        '<html>',
+        '', # <-- Qree seems to like adding trailing newlines.
+    ]);
+    assert qree.renderPath(homepagePath, data) == expectedHomepage;
+    
+    @qree.view(homepagePath)
+    def serveHomepage ():
+        return data;
+    assert serveHomepage() == expectedHomepage;
+    
+    print(expectedHomepage);
+test_renderPath_nested_plus_with_view();
+
+# End ######################################################

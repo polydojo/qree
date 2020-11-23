@@ -1,15 +1,28 @@
 """
 Qree: Tiny but mighty Python templating.
+
 Copyright (c) 2020 Polydojo, Inc.
+
+SOFTWARE LICENSING
+------------------
+The software is released "AS IS" under the MIT License,
+WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED. Kindly
+see LICENSE.txt for more details.
+
+NO TRADEMARK RIGHTS
+-------------------
+The above software licensing terms DO NOT grant any right in the
+trademarks, service marks, brand names or logos of Polydojo, Inc.
 """;
 
 import functools;
 
-__version__ = "0.0.2";  # Req'd by flit.
+__version__ = "0.0.3";  # Req'd by flit.
 __DEFAULT_TAG_MAP__ = { "@=": "@=",  "@{": "@{",  "@}": "@}",
     "{{:": "{{:",  ":}}": ":}}",  "{{=": "{{=",  "=}}": "=}}",
 };
-escapeHtml = lambda s: (str(s).replace("&", "&amp;").replace("<", "&lt;")
+
+escHtml = lambda s: (str(s).replace("&", "&amp;").replace("<", "&lt;")
     .replace(">", "&gt;").replace('"', "&quot;").replace("'", "&#x27;")          # TODO: Consider: .replace("`", "&#x60;")
 );
 
@@ -20,46 +33,85 @@ def dictDefaults (dicty, defaults):
             dicty[k] = defaults[k];
     return dicty;
 
-def roughValidateTagPair (tplStr, opTag, clTag):
-    "Helper for roughly validating that tag-counts match.";
-    if tplStr.count(opTag) != tplStr.count(clTag):
-        raise SyntaxError("Template Error:: Tag-count mismatch for tags `%s` and `%s`." % (opTag, clTag));
+def findFirstMatch(haystack, needleList, fromIndex=0):
+    "Finds needle in `haystack from needlList w/ lowest index.";
+    foundNeedle = None;
+    minIndex = None;
+    for needle in needleList:
+        index = haystack.find(needle, fromIndex);
+        if index == -1:
+            pass;
+        elif (minIndex is None) or (index < minIndex):
+            foundNeedle = needle;
+            minIndex = index;
+    return (foundNeedle, minIndex);
+
+def validateSubstitutionTagPair (opTag, clTag, tagMap):
+    "Helps escapeNonPyQuotes().";
+    assert opTag in [tagMap["{{="], tagMap["{{:"]];
+    expectedClTag = tagMap["=}}" if opTag == tagMap["{{="] else ":}}"];
+    if clTag != expectedClTag:
+        raise SyntaxError("Tag-mismatch. Expected %r, not %r" % (
+            expectedClTag, clTag,
+        ));
+    # otherwise ...
     return True;
 
-def roughValidateTplStr (tplStr, tagMap):
-    "Helper for roughly validating `tplStr` formatting.";
-    if "'''" in tplStr:
-        raise SyntaxError("Template Error:: Can't use 3 consecutive single quotes (''').");
-    assert roughValidateTagPair(tplStr, tagMap["@{"], tagMap["@}"]);
-    assert roughValidateTagPair(tplStr, tagMap["{{:"], tagMap[":}}"]);
-    assert roughValidateTagPair(tplStr, tagMap["{{="], tagMap["=}}"]);
+def escapeNonPyQuotes (line, tagMap):
+    tags = list(map(tagMap.get, "{{= =}} {{: :}}".split()));
+    firstTag, firstIndex = findFirstMatch(line, tags);
+    if not firstTag:
+        return line.replace("'", r"\'");
+    # otherwise ...
+    nextTag, nextIndex = findFirstMatch(line, tags, firstIndex+1);
+    assert validateSubstitutionTagPair(firstTag, nextTag, tagMap);
+    beyondNextTagEndIndex = nextIndex + len(nextTag);
+    return (
+        line[ : firstIndex].replace("'", r"\'") +
+        line[firstIndex: beyondNextTagEndIndex] +
+        escapeNonPyQuotes(line[beyondNextTagEndIndex : ], tagMap) #+
+    );
+
+def validateStandaloneIndentLine (line, tag):
+    "Ensures indent-line only has indent-tag, excl. comment.";
+    if line.split("#")[0].strip() != tag:
+        raise IndentationError("Invalid de/indent line: %r" % line);
     return True;
 
 def quoteReplace (tplStr, variable="data", tagMap=None):
     "Returns as string, the function-equivalent of `tplStr`.";
     tagMap = dictDefaults(tagMap or {}, __DEFAULT_TAG_MAP__);
-    assert roughValidateTplStr(tplStr, tagMap);
     fnStr = "def templateFn (%s):\n" % variable;
-    indentVal = 4;
-    indentify = lambda: " " * indentVal;
-    fnStr += indentify() + "from qree import escapeHtml as __qree__esc__html__;\n";
+    innerIndentDepth = 0;   # Depth due to @{ and @} only.
+    indentify = lambda: " " * ((1 + innerIndentDepth) * 4);
+    fnStr += indentify() + "from qree import escHtml as __qreeEsc;\n";
     fnStr += indentify() + "output = '';\n";
     for line in tplStr.splitlines(True):
+        # Param `keepends=True` ^^^^. (Not kwarg for py2.)
         lx = line.lstrip();
         if lx.startswith(tagMap["@="]):
-            fnStr += indentify() + lx[2:].strip() + "\n";
+            pyCode = lx[len(tagMap["@="]) : ].strip();
+            fnStr += indentify() + pyCode + "\n";
         elif lx.startswith(tagMap["@{"]):
-            indentVal += 4;
+            assert validateStandaloneIndentLine(lx, tagMap["@{"])
+            innerIndentDepth += 1;
         elif lx.startswith(tagMap["@}"]):
-            indentVal -= 4;
+            assert validateStandaloneIndentLine(lx, tagMap["@}"])
+            innerIndentDepth -= 1;
         else:
-            fnStr += indentify() + "output += " + "'''" +  (line
-                .replace(tagMap["{{="],  "''' + str(")
-                .replace(tagMap["=}}"],  ") + '''")
-                .replace(tagMap["{{:"],  "''' + __qree__esc__html__(")
-                .replace(tagMap[":}}"],  ") + '''")
+            
+            fnStr += indentify() + "output += " + "'''" +  (
+                escapeNonPyQuotes(line, tagMap) # <- Err thrower
+                    .replace(tagMap["{{="],  "''' + str(")
+                    .replace(tagMap["=}}"],  ") + '''")
+                    .replace(tagMap["{{:"],  "''' + __qreeEsc(")
+                    .replace(tagMap[":}}"],  ") + '''")
             ) + "''';\n";
     fnStr += indentify() + "return output;\n";
+    if innerIndentDepth != 0:
+        raise IndentationError("Tag-mismatch for tags " +
+            ("%r and %r." % (tagMap["@{"], tagMap["@}"])) #+
+        );
     return fnStr;
 
 def execEval (fnStr):
@@ -87,10 +139,10 @@ def view (tplPath, variable="data", tagMap=None):
         return wrapper;
     return decorator;
 
-#TODO:
+# TODO/Consider:
 #checkNonPathy = lambda s: "\n" in s or "{" in s or "@" in s;
 #def render (s, data=None, variable="data", tagMap=None):
-#    "Wr";
+#    "Wrapper that auto-picks renderPath() or renderStr()";
 #    renderFn = renderStr if checkNonPathy(s) else renderPath;
 #    return renderFn(s, data, variable, tagMap);
 
