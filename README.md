@@ -3,7 +3,7 @@ Qree
 
 Qree (read 'Curie') is a tiny but mighty Python templating engine, geared toward HTML. 'Qree' is short for: *Q*uote, *r*eplace, *e*xec(), *e*val().
 
-The whole thing is under 200 lines of code. Instead of using regular expressions or PEGs, Qree relies on Python's `exec()` and `eval()`. Thus, it supports *all language features*, out of the box.
+The entire module is under 200 lines. Instead of using regular expressions or PEGs, Qree relies on Python's `exec()` and `eval()`. Thus, it supports *all language features*, out of the box. For more on Qree's internals, please see: [*Build Your Own Python Template Engine*](https://www.sumukhbarve.com/build-python-template-engine)
 
 **!!! Warning:** Do **NOT** render untrusted templates. As Qree uses `eval()`, rendering untrusted templates is equivalent to giving untrusted entities access to your entire systems.
 
@@ -393,6 +393,18 @@ def serve_userList (req, res):
 
 **Custom Tags:**  
 Like with `qree.renderPath(.)` and `qree.renderStr(.)`, you can use custom tags with `qree.view(.)` by passing `tagMap`.
+
+Testing & Contributing
+---------------------------
+
+Install pytest via `pip install -U pytest`. Run tests with:
+```
+pytest
+```
+
+If you encounter a bug, please open an issue on GitHub; but if you find a security vulnerability, please email security@polydojo.com instead.
+
+If you'd like to see a new feature or contribute code, please open a GitHub issue. We'd love to hear from you! Suggestions and code contributions will always be appreciated, big and small.
 
 
 Licensing

@@ -17,7 +17,7 @@ trademarks, service marks, brand names or logos of Polydojo, Inc.
 
 import functools;
 
-__version__ = "0.0.3";  # Req'd by flit.
+__version__ = "0.0.4";  # Req'd by flit.
 __DEFAULT_TAG_MAP__ = { "@=": "@=",  "@{": "@{",  "@}": "@}",
     "{{:": "{{:",  ":}}": ":}}",  "{{=": "{{=",  "=}}": "=}}",
 };
@@ -33,7 +33,7 @@ def dictDefaults (dicty, defaults):
             dicty[k] = defaults[k];
     return dicty;
 
-def findFirstMatch(haystack, needleList, fromIndex=0):
+def findFirstMatch (haystack, needleList, fromIndex=0):
     "Finds needle in `haystack from needlList w/ lowest index.";
     foundNeedle = None;
     minIndex = None;
@@ -58,6 +58,7 @@ def validateSubstitutionTagPair (opTag, clTag, tagMap):
     return True;
 
 def escapeNonPyQuotes (line, tagMap):
+    "Escapes single-quotes outside py-substitution bits.";
     tags = list(map(tagMap.get, "{{= =}} {{: :}}".split()));
     firstTag, firstIndex = findFirstMatch(line, tags);
     if not firstTag:
@@ -78,19 +79,30 @@ def validateStandaloneIndentLine (line, tag):
         raise IndentationError("Invalid de/indent line: %r" % line);
     return True;
 
+def validateNoSpecialQreeToken (tplStr):
+    "Ensures that token '__qree' is absent in `tplStr`.";
+    if "__qree" in tplStr:
+        raise SyntaxError("The special token '__qree' is " +
+            "reserved for Qree itself. It may NOT appear " +
+            "in any template."                         #+
+        );
+    return True;
+
 def quoteReplace (tplStr, variable="data", tagMap=None):
     "Returns as string, the function-equivalent of `tplStr`.";
+    assert validateNoSpecialQreeToken(tplStr);
     tagMap = dictDefaults(tagMap or {}, __DEFAULT_TAG_MAP__);
     fnStr = "def templateFn (%s):\n" % variable;
     innerIndentDepth = 0;   # Depth due to @{ and @} only.
     indentify = lambda: " " * ((1 + innerIndentDepth) * 4);
     fnStr += indentify() + "from qree import escHtml as __qreeEsc;\n";
-    fnStr += indentify() + "output = '';\n";
+    fnStr += indentify() + "__qreeOutput = '';\n";
     for line in tplStr.splitlines(True):
         # Param `keepends=True` ^^^^. (Not kwarg for py2.)
         lx = line.lstrip();
         if lx.startswith(tagMap["@="]):
-            pyCode = lx[len(tagMap["@="]) : ].strip();
+            pyCode = lx[len(tagMap["@="]) : ].lstrip();
+            # Remove whitespace right after '@=' ^^^^
             fnStr += indentify() + pyCode + "\n";
         elif lx.startswith(tagMap["@{"]):
             assert validateStandaloneIndentLine(lx, tagMap["@{"])
@@ -99,15 +111,14 @@ def quoteReplace (tplStr, variable="data", tagMap=None):
             assert validateStandaloneIndentLine(lx, tagMap["@}"])
             innerIndentDepth -= 1;
         else:
-            
-            fnStr += indentify() + "output += " + "'''" +  (
+            fnStr += indentify() + "__qreeOutput += " + "'''" +  (
                 escapeNonPyQuotes(line, tagMap) # <- Err thrower
-                    .replace(tagMap["{{="],  "''' + str(")
+                    .replace(tagMap["{{="],  "''' + str(")  # 1st, {{{-compat
                     .replace(tagMap["=}}"],  ") + '''")
                     .replace(tagMap["{{:"],  "''' + __qreeEsc(")
                     .replace(tagMap[":}}"],  ") + '''")
             ) + "''';\n";
-    fnStr += indentify() + "return output;\n";
+    fnStr += indentify() + "return __qreeOutput;\n";
     if innerIndentDepth != 0:
         raise IndentationError("Tag-mismatch for tags " +
             ("%r and %r." % (tagMap["@{"], tagMap["@}"])) #+

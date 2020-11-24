@@ -26,7 +26,39 @@ def test_pyQuotesOk ():
     qree.renderStr("{{: data['foo'] :}}", {"foo": "bar"}) == "bar";
     qree.renderStr("{{: data['''foo'''] :}}", {"foo": "bar"}) == "bar";
 
+def test_qreeSpecialTokenError ():
+    "Test that special token `__qree` is disallowed.";
+    badTplList = [
+        # 1, 2, 3:
+        "__qree",
+        "{{: data.__qree :}}",
+        "{{= data['__qree'] =}}",
+        # 4:
+        """
+        @= import json;
+        @= data.update({"__qree": "foobar"});
+        {{: json.dumps(data) :}}
+        """,
+    ];
+    assert len(badTplList) == 4;
+    for badTpl in badTplList:
+        with pytest.raises(SyntaxError) as e:
+            qree.renderStr(badTpl, data={});
+        assert type(e.value) is SyntaxError;
+        assert "special token" in e.value.args[0];
+    # Next:
+    goodTpl = """
+    @= import json;
+    @= data.update({"foo": "bar"});
+    {{: json.dumps(data) :}}
+    """;
+    expected = """
+    {&quot;foo&quot;: &quot;bar&quot;}
+    """;
+    assert qree.renderStr(goodTpl, data={}) == expected;
+
 def test_substitution_tag_error ():
+    "Test unclosed/nested substitution tags raise SyntaxError.";
     badTplList =[
         "Hello, {{: data + '!' ]]",             # Unclosed
         "Hello, {{= {{: data + '!' :}} =}}",    # Nesting banned
@@ -37,8 +69,10 @@ def test_substitution_tag_error ():
         """,
     ];
     for badTpl in badTplList:
-        with pytest.raises(SyntaxError):
+        with pytest.raises(SyntaxError) as e:
             qree.renderStr(badTpl, "World");
+        assert type(e.value) is SyntaxError;
+        assert "Tag-mismatch" in e.value.args[0];
 
 def test_indent_tag_error ():
     badTplList = [
